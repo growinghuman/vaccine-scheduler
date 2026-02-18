@@ -96,12 +96,6 @@ export function ScheduleTable() {
     pivot.get(dose.scheduledDate)!.set(dose.vaccineId, dose)
   }
 
-  // Get the age label for a row (from first non-invalid dose on that date)
-  const getAgeLabel = (date: string) => {
-    const doses = [...(pivot.get(date)?.values() ?? [])]
-    return (doses.find((d) => d.status !== 'invalid') ?? doses[0])?.ageLabel ?? ''
-  }
-
   // Series completion status (catch-up mode only)
   const seriesStatus = vaccines.map((v) => {
     const totalDoses = VACCINE_RULES.filter((r) => r.vaccineId === v.id).length
@@ -154,7 +148,7 @@ export function ScheduleTable() {
       const statusCol = mode === 'catchup'
       const head = [[
         'Vaccine',
-        ...dates.map((d) => `${formatDate(d)}\n${getAgeLabel(d)}`),
+        ...dates.map((d) => formatDate(d)),
         ...(statusCol ? ['Status'] : []),
       ]]
       const body = vaccines.map((v) => {
@@ -262,9 +256,8 @@ export function ScheduleTable() {
                 Vaccine
               </th>
               {dates.map((date) => (
-                <th key={date} className="py-1.5 px-2 font-medium text-center whitespace-nowrap">
-                  <div>{formatDate(date)}</div>
-                  <div className="font-normal text-blue-200 text-xs">{getAgeLabel(date)}</div>
+                <th key={date} className="py-2 px-2 font-medium text-center whitespace-nowrap">
+                  {formatDate(date)}
                 </th>
               ))}
               {mode === 'catchup' && (

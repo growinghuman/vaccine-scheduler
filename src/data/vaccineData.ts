@@ -111,7 +111,7 @@ export const VACCINE_INFO: Record<string, VaccineInfo> = {
 export const VACCINE_RULES: VaccineRule[] = [
   // Hepatitis B (HepB)
   { vaccineId: 'HepB', doseNumber: 1, standardAgeMonths: 0, minAgeWeeks: 0 },
-  { vaccineId: 'HepB', doseNumber: 2, standardAgeMonths: 1, minAgeWeeks: 4, minIntervalWeeks: 4 },
+  { vaccineId: 'HepB', doseNumber: 2, standardAgeMonths: 2, minAgeWeeks: 4, minIntervalWeeks: 4 },
   { vaccineId: 'HepB', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 24, minIntervalWeeks: 8 },
 
   // DTaP
