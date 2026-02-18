@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@media print {
+  /* Hide everything except the schedule */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset page background */
+  body {
+    background: white;
+  }
+
+  /* Remove card shadow / border for print */
+  .print-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure badge colors print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Avoid page breaks inside rows */
+  tr {
+    break-inside: avoid;
+  }
+
+  /* Compact spacing */
+  table {
+    font-size: 11px;
+  }
+}
