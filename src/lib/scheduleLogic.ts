@@ -138,20 +138,21 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         projectedPrevDate && rule.minIntervalWeeks
           ? addWeeks(projectedPrevDate, rule.minIntervalWeeks)
           : minAgeDate
-      const nextDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
+      const earliestDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
+      // If the earliest eligible date is in the past, reschedule to today
+      const scheduledDate = isBefore(earliestDate, today) ? today : earliestDate
 
       result.push({
         vaccineId: vaccineId as VaccineType,
         vaccineName: info.name,
         vaccineKoreanName: info.koreanName,
         doseNumber: i + 1,
-        scheduledDate: format(nextDate, 'yyyy-MM-dd'),
+        scheduledDate: format(scheduledDate, 'yyyy-MM-dd'),
         ageLabel: getAgeLabel(rule.standardAgeMonths),
-        status: getDoseStatus(nextDate, today),
+        status: getDoseStatus(scheduledDate, today),
       })
 
-      // If this dose is overdue, assume it will be given today for projection purposes
-      projectedPrevDate = isBefore(nextDate, today) ? today : nextDate
+      projectedPrevDate = scheduledDate
     }
   }
 
