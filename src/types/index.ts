@@ -47,7 +47,7 @@ export interface ScheduledDose {
   doseNumber: number
   scheduledDate: string // ISO date string
   ageLabel: string // e.g. "생후 2개월"
-  status: 'upcoming' | 'due' | 'overdue' | 'completed'
+  status: 'upcoming' | 'due' | 'overdue' | 'completed' | 'invalid'
 }
 
 export interface SchedulerFormValues {

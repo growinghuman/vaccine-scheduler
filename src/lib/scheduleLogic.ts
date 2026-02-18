@@ -51,70 +51,108 @@ export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
 
 /**
  * Calculate catch-up schedule based on dose history.
- * For each dose not yet in history, next eligible date =
- *   max(DOB + minAgeWeeks, lastDoseDate + minIntervalWeeks)
+ *
+ * Doses in history are validated against CDC minimum age (DOB + minAgeWeeks)
+ * and minimum interval (prevValidDose + minIntervalWeeks). A dose that violates
+ * either constraint is marked 'invalid' and does NOT count toward series
+ * progression — the next pending dose number is based only on valid doses.
  */
 export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): ScheduledDose[] {
   const dobDate = new Date(dob)
   const today = new Date()
   const result: ScheduledDose[] = []
 
-  // Group history by vaccineId for quick lookup
+  // Group history by vaccineId, sorted by date given
   const historyMap = new Map<string, DoseHistory[]>()
   for (const dose of history) {
-    const key = dose.vaccineId
-    if (!historyMap.has(key)) historyMap.set(key, [])
-    historyMap.get(key)!.push(dose)
+    if (!historyMap.has(dose.vaccineId)) historyMap.set(dose.vaccineId, [])
+    historyMap.get(dose.vaccineId)!.push(dose)
   }
 
-  // Process each unique vaccine
   const vaccineIds = [...new Set(VACCINE_RULES.map((r) => r.vaccineId))]
 
   for (const vaccineId of vaccineIds) {
     const rules = VACCINE_RULES.filter((r) => r.vaccineId === vaccineId).sort(
-      (a, b) => a.doseNumber - b.doseNumber
+      (a, b) => a.doseNumber - b.doseNumber,
     )
-    const given = (historyMap.get(vaccineId) ?? []).sort((a, b) => a.doseNumber - b.doseNumber)
+    // Sort by actual date given (not user-entered dose number)
+    const given = (historyMap.get(vaccineId) ?? []).sort(
+      (a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime(),
+    )
     const info = VACCINE_INFO[vaccineId]
 
-    // Mark completed doses
+    let prevValidDate: Date | null = null
+    let validDoseCount = 0
+
     for (const dose of given) {
-      const rule = rules.find((r) => r.doseNumber === dose.doseNumber)
-      if (!rule) continue
+      const rule = rules[validDoseCount] // next rule slot in series
+
+      if (!rule) {
+        // Given beyond the total series length — mark invalid
+        result.push({
+          vaccineId: vaccineId as VaccineType,
+          vaccineName: info.name,
+          vaccineKoreanName: info.koreanName,
+          doseNumber: dose.doseNumber,
+          scheduledDate: dose.dateGiven,
+          ageLabel: '—',
+          status: 'invalid',
+        })
+        continue
+      }
+
+      const givenDate = new Date(dose.dateGiven)
+      const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
+      const isOldEnough = !isBefore(givenDate, minAgeDate)
+      const hasMinInterval =
+        !prevValidDate || !rule.minIntervalWeeks
+          ? true
+          : !isBefore(givenDate, addWeeks(prevValidDate, rule.minIntervalWeeks))
+      const isValid = isOldEnough && hasMinInterval
+
       result.push({
         vaccineId: vaccineId as VaccineType,
         vaccineName: info.name,
         vaccineKoreanName: info.koreanName,
-        doseNumber: dose.doseNumber,
+        // Valid doses get the correct sequential number; invalid keep what user entered
+        doseNumber: isValid ? validDoseCount + 1 : dose.doseNumber,
         scheduledDate: dose.dateGiven,
         ageLabel: getAgeLabel(rule.standardAgeMonths),
-        status: 'completed',
+        status: isValid ? 'completed' : 'invalid',
       })
+
+      if (isValid) {
+        prevValidDate = givenDate
+        validDoseCount++
+      }
     }
 
-    // Calculate next pending dose
-    const nextDoseNumber = given.length + 1
-    const nextRule = rules.find((r) => r.doseNumber === nextDoseNumber)
-    if (!nextRule) continue
+    // Schedule ALL remaining doses in a compressed catch-up sequence.
+    // Each dose projects forward from the previous planned date; overdue doses
+    // are assumed to be given "today" when projecting the next dose's earliest date.
+    let projectedPrevDate = prevValidDate
+    for (let i = validDoseCount; i < rules.length; i++) {
+      const rule = rules[i]
+      const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
+      const minIntervalDate =
+        projectedPrevDate && rule.minIntervalWeeks
+          ? addWeeks(projectedPrevDate, rule.minIntervalWeeks)
+          : minAgeDate
+      const nextDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
 
-    const minAgeDate = addWeeks(dobDate, nextRule.minAgeWeeks)
-    const lastGiven = given.at(-1)
-    const minIntervalDate =
-      lastGiven && nextRule.minIntervalWeeks
-        ? addWeeks(new Date(lastGiven.dateGiven), nextRule.minIntervalWeeks)
-        : minAgeDate
+      result.push({
+        vaccineId: vaccineId as VaccineType,
+        vaccineName: info.name,
+        vaccineKoreanName: info.koreanName,
+        doseNumber: i + 1,
+        scheduledDate: format(nextDate, 'yyyy-MM-dd'),
+        ageLabel: getAgeLabel(rule.standardAgeMonths),
+        status: getDoseStatus(nextDate, today),
+      })
 
-    const nextDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
-
-    result.push({
-      vaccineId: vaccineId as VaccineType,
-      vaccineName: info.name,
-      vaccineKoreanName: info.koreanName,
-      doseNumber: nextDoseNumber,
-      scheduledDate: format(nextDate, 'yyyy-MM-dd'),
-      ageLabel: getAgeLabel(nextRule.standardAgeMonths),
-      status: getDoseStatus(nextDate, today),
-    })
+      // If this dose is overdue, assume it will be given today for projection purposes
+      projectedPrevDate = isBefore(nextDate, today) ? today : nextDate
+    }
   }
 
   return result.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
