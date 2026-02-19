@@ -110,6 +110,61 @@ export const VACCINE_INFO: Record<string, VaccineInfo> = {
     commonSideEffects: ['Fussiness or irritability', 'Temporary diarrhea or vomiting'],
     seriousSideEffects: ['Intussusception / bowel obstruction (very rare)'],
   },
+  Influenza: {
+    id: 'Influenza',
+    name: 'Influenza (IIV·사백신)',
+    koreanName: '독감 (사백신)',
+    description:
+      'Inactivated influenza vaccine (injectable). Minimum age: 6 months. ' +
+      'Children 6 months–8 years need 2 doses (≥4 weeks apart) if they have received fewer than 2 prior influenza vaccine doses; otherwise 1 dose. ' +
+      'Children 9 years and older need 1 dose annually.',
+    commonSideEffects: [
+      'Soreness, redness, or swelling at injection site',
+      'Low-grade fever',
+      'Headache or fatigue',
+      'Muscle aches',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+      'Guillain-Barré syndrome (very rare)',
+    ],
+  },
+  InfluenzaLAIV: {
+    id: 'InfluenzaLAIV',
+    name: 'Influenza (LAIV·생백신)',
+    koreanName: '독감 (생백신)',
+    description:
+      'Live attenuated influenza vaccine (nasal spray). Minimum age: 2 years. ' +
+      'Children 2–8 years need 2 doses (≥4 weeks apart) if they have received fewer than 2 prior influenza vaccine doses; otherwise 1 dose. ' +
+      'Children 9 years and older need 1 dose annually. Not for immunocompromised patients.',
+    commonSideEffects: [
+      'Runny nose or nasal congestion',
+      'Low-grade fever',
+      'Headache or sore throat',
+      'Muscle aches',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+      'Wheezing (not recommended under 2 years)',
+    ],
+  },
+  InfluenzaRIV: {
+    id: 'InfluenzaRIV',
+    name: 'Influenza (RIV·재조합)',
+    koreanName: '독감 (재조합)',
+    description:
+      'Recombinant influenza vaccine (injectable, egg-free). Minimum age: 18 years. 1 dose annually.',
+    commonSideEffects: [
+      'Soreness, redness, or swelling at injection site',
+      'Headache or fatigue',
+      'Muscle aches',
+      'Low-grade fever',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+      'Guillain-Barré syndrome (very rare)',
+    ],
+  },
   Tdap: {
     id: 'Tdap',
     name: 'Tdap',
@@ -262,4 +317,24 @@ export const VACCINE_RULES: VaccineRule[] = [
   // minAgeWeeks: 832 = 16 years; minIntervalWeeks: 4 (1 month minimum, Bexsero 2-dose schedule)
   { vaccineId: 'MenB', doseNumber: 1, standardAgeMonths: 192, minAgeWeeks: 832 },
   { vaccineId: 'MenB', doseNumber: 2, standardAgeMonths: 193, minAgeWeeks: 832, minIntervalWeeks: 4 },
+
+  // Influenza IIV (inactivated injectable) — minimum age 6 months (26 weeks)
+  // Series length is age- and history-dependent (handled in scheduleLogic):
+  //   Age ≥9yr (≥468w): 1 dose
+  //   Age 6m–8yr with <2 prior valid doses: 2 doses, D1→D2 ≥4 weeks
+  //   Age 6m–8yr with ≥2 prior valid doses: 1 dose (treated as series complete)
+  // standardAgeMonths 6 = first opportunity; D2 at 7m = 4 weeks after D1
+  { vaccineId: 'Influenza',     doseNumber: 1, standardAgeMonths: 6,   minAgeWeeks: 26 },
+  { vaccineId: 'Influenza',     doseNumber: 2, standardAgeMonths: 7,   minAgeWeeks: 26,  minIntervalWeeks: 4 },
+
+  // Influenza LAIV (live attenuated nasal spray) — minimum age 2 years (104 weeks)
+  // Same series-length logic as IIV; not shown in standard schedule
+  { vaccineId: 'InfluenzaLAIV', doseNumber: 1, standardAgeMonths: 24,  minAgeWeeks: 104 },
+  { vaccineId: 'InfluenzaLAIV', doseNumber: 2, standardAgeMonths: 25,  minAgeWeeks: 104, minIntervalWeeks: 4 },
+
+  // Influenza RIV (recombinant injectable) — minimum age 18 years (936 weeks)
+  // Min age ≥18yr → always ≥9yr → effectiveRules = 1 dose only; D2 rule kept for structure
+  // Not shown in standard schedule
+  { vaccineId: 'InfluenzaRIV',  doseNumber: 1, standardAgeMonths: 216, minAgeWeeks: 936 },
+  { vaccineId: 'InfluenzaRIV',  doseNumber: 2, standardAgeMonths: 217, minAgeWeeks: 936, minIntervalWeeks: 4 },
 ]

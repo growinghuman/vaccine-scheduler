@@ -16,7 +16,15 @@ const AGE_LABELS: Record<number, string> = {
 }
 
 function getAgeLabel(months: number): string {
-  return AGE_LABELS[months] ?? `${months} months`
+  if (AGE_LABELS[months] !== undefined) return AGE_LABELS[months]
+  if (months >= 24) {
+    const years = Math.floor(months / 12)
+    const rem = months % 12
+    if (rem === 0) return `${years} years`
+    if (rem === 1) return `${years} years 1 month`
+    return `${years} years ${rem} months`
+  }
+  return `${months} months`
 }
 
 function getDoseStatus(scheduledDate: Date, today: Date): ScheduledDose['status'] {
@@ -36,9 +44,12 @@ export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
   // Exclude from standard (newborn) schedule:
   //  - HPV D3: only for 3-dose series (D1 at ≥15yr); standard D1 is at 11yr
   //  - RotarixHRV: brand-specific 2-dose series; standard schedule uses RotaTeq (Rotavirus)
+  //  - InfluenzaLAIV / InfluenzaRIV: user selects vaccine type; standard shows IIV only
   return VACCINE_RULES.filter(
     (rule) => !(rule.vaccineId === 'HPV' && rule.doseNumber === 3)
-           && rule.vaccineId !== 'RotarixHRV',
+           && rule.vaccineId !== 'RotarixHRV'
+           && rule.vaccineId !== 'InfluenzaLAIV'
+           && rule.vaccineId !== 'InfluenzaRIV',
   ).map((rule) => {
     const info = VACCINE_INFO[rule.vaccineId]
     const scheduledDate = addMonths(dobDate, rule.standardAgeMonths)
@@ -229,6 +240,22 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         effectiveRules = [...rules.slice(0, validDoseCount), rules[3]]
       }
       // else: D1 before 12m, child still < 12m → standard 4-dose series
+    }
+
+    // Influenza (IIV / LAIV / RIV): annual vaccine.
+    // Series length depends on age at first dose and prior dose count.
+    //   Age ≥9yr (≥468w) at D1: 1 dose only (RIV min age 18yr → always 1 dose)
+    //   Age <9yr with ≥2 prior valid doses: series already complete (no projection)
+    //   Age <9yr with <2 prior valid doses: 2-dose series (D1→D2 ≥4w)
+    if (vaccineId === 'Influenza' || vaccineId === 'InfluenzaLAIV' || vaccineId === 'InfluenzaRIV') {
+      const firstDoseDate = firstValidDoseDate ?? today
+      const ageAtD1Weeks = differenceInWeeks(firstDoseDate, dobDate)
+      if (ageAtD1Weeks >= 468) {
+        effectiveRules = [rules[0]]   // ≥9yr: 1 dose only
+      } else if (validDoseCount >= 2) {
+        effectiveRules = []           // <9yr with ≥2 prior doses: complete, nothing to project
+      }
+      // else: <9yr with <2 prior doses → standard 2-dose series (effectiveRules = rules)
     }
 
     // HPV: 2-dose series if D1 before 15th birthday (< 780w); 3-dose series if D1 ≥15 years.

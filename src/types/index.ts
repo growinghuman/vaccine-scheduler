@@ -9,6 +9,9 @@ export type VaccineType =
   | 'HepA'
   | 'Rotavirus'   // RotaTeq (RV5) — 3-dose series
   | 'RotarixHRV'  // Rotarix (HRV) — 2-dose series
+  | 'Influenza'     // IIV  — inactivated injectable (사백신), min 6 months
+  | 'InfluenzaLAIV' // LAIV — live attenuated nasal spray (생백신), min 2 years
+  | 'InfluenzaRIV'  // RIV  — recombinant injectable (재조합), min 18 years
   | 'Tdap'
   | 'MCV4'
   | 'HPV'
