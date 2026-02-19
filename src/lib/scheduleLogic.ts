@@ -82,6 +82,7 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     const info = VACCINE_INFO[vaccineId]
 
     let prevValidDate: Date | null = null
+    let firstValidDoseDate: Date | null = null
     let validDoseCount = 0
 
     for (const dose of given) {
@@ -122,15 +123,78 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       })
 
       if (isValid) {
+        if (firstValidDoseDate === null) firstValidDoseDate = givenDate
         prevValidDate = givenDate
         validDoseCount++
       }
     }
 
-    // Conditional final-dose skip:
+    // Age-dependent catch-up series length for Hib and PCV.
+    // First dose date is taken from history (firstValidDoseDate) or assumed to be today.
+    //
+    // Hib (CDC catch-up table — exact rules):
+    //   D1 at 7–11m (30–51w): 3 doses — D2 4w after D1, D3/final at ≥12m or 8w after D2
+    //   D1 at 12–14m (52–64w): 2 doses — D2/final 8w after D1
+    //   D1 before 12m AND D2 before 15m (validDoseCount=2): D3/final 8w after D2
+    //   1 dose at 15m+ (≥65w): done — no further doses
+    //   Unvaccinated at 15–59m (≥65w): 1 dose
+    //   Unvaccinated at 60m+ (≥260w): none (not recommended)
+    //
+    // PCV (CDC catch-up table):
+    //   < 12 months  (< 52w): standard 4-dose series
+    //   12–23 months (52–103w): 2 doses — D2 (booster) 8w after D1
+    //   24+ months  (≥104w): 1 dose only (healthy children)
+    let effectiveRules = rules
+    if (vaccineId === 'Hib') {
+      const firstDoseDate = firstValidDoseDate ?? today
+      const ageW = differenceInWeeks(firstDoseDate, dobDate)
+
+      if (ageW >= 260) {
+        effectiveRules = []
+      } else if (ageW >= 65) {
+        effectiveRules = [rules[0]]  // 1 dose only
+      } else if (ageW >= 52) {
+        effectiveRules = [rules[0], rules[3]]  // 2-dose: booster 8w after D1, ≥12m
+      } else if (ageW >= 30) {
+        effectiveRules = [rules[0], rules[1], rules[3]]  // 3-dose
+      } else {
+        // D1 before 7 months (standard 4-dose territory), but:
+        // CDC rule: if D1 before 12m AND D2 before 15m → D3 is the FINAL dose (8w after D2)
+        if (validDoseCount === 2 && firstValidDoseDate && prevValidDate) {
+          const d1AgeW = differenceInWeeks(firstValidDoseDate, dobDate)
+          const d2AgeW = differenceInWeeks(prevValidDate, dobDate)
+          if (d1AgeW < 52 && d2AgeW < 65) {
+            effectiveRules = [rules[0], rules[1], rules[3]]  // D3/final uses booster rule
+          }
+        }
+        // else: standard 4-dose series (effectiveRules = rules)
+      }
+    }
+
+    if (vaccineId === 'PCV') {
+      const firstDoseDate = firstValidDoseDate ?? today
+      const firstDoseAgeW = differenceInWeeks(firstDoseDate, dobDate)
+      const todayAgeW = differenceInWeeks(today, dobDate)
+
+      if (firstDoseAgeW >= 104) {
+        // D1 at 24m+: 1 dose only (healthy children)
+        effectiveRules = [rules[0]]
+      } else if (firstDoseAgeW >= 52) {
+        // D1 at 12-23m: 2 doses, D2=booster (8w after D1, at ≥12m)
+        effectiveRules = [rules[0], rules[3]]
+      } else if (validDoseCount >= 1 && validDoseCount < 4 && todayAgeW >= 52) {
+        // D1 was before 12m AND child is now ≥12m old:
+        // the next dose is the FINAL booster (8w min interval, ≥12m age)
+        effectiveRules = [...rules.slice(0, validDoseCount), rules[3]]
+      }
+      // else: D1 before 12m, child still < 12m → standard 4-dose series
+    }
+
+    // Conditional final-dose skips:
     // DTaP D5 not needed if D4 was given at age >= 4 years (208 weeks from DOB).
     // IPV D4 not needed if D3 was given at age >= 4 years (208 weeks from DOB).
-    let effectiveRulesLength = rules.length
+    // PCV: no further doses if most recent dose was at age >= 24 months (104 weeks).
+    let effectiveRulesLength = effectiveRules.length
     if (prevValidDate) {
       const ageAtLastDoseWeeks = differenceInWeeks(prevValidDate, dobDate)
       if (vaccineId === 'DTaP' && validDoseCount === 4 && ageAtLastDoseWeeks >= 208) {
@@ -139,20 +203,32 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       if (vaccineId === 'IPV' && validDoseCount === 3 && ageAtLastDoseWeeks >= 208) {
         effectiveRulesLength = 3 // D4 not needed
       }
+      if (vaccineId === 'PCV' && ageAtLastDoseWeeks >= 104) {
+        effectiveRulesLength = validDoseCount // no more doses after 24m+
+      }
     }
 
     // Schedule ALL remaining doses in a compressed catch-up sequence.
     // Each dose projects forward from the previous planned date; overdue doses
     // are assumed to be given "today" when projecting the next dose's earliest date.
+    let firstDoseDate: Date | null = firstValidDoseDate  // tracked for HepB 16-week rule
     let projectedPrevDate = prevValidDate
     for (let i = validDoseCount; i < effectiveRulesLength; i++) {
-      const rule = rules[i]
+      const rule = effectiveRules[i]
+      if (!rule) break
       const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
       const minIntervalDate =
         projectedPrevDate && rule.minIntervalWeeks
           ? addWeeks(projectedPrevDate, rule.minIntervalWeeks)
           : minAgeDate
-      const earliestDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
+      let earliestDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
+
+      // HepB D3: CDC requires at least 16 weeks after D1 in addition to 8w after D2
+      if (vaccineId === 'HepB' && i === 2 && firstDoseDate) {
+        const d1Plus16w = addWeeks(firstDoseDate, 16)
+        if (isAfter(d1Plus16w, earliestDate)) earliestDate = d1Plus16w
+      }
+
       // If the earliest eligible date is in the past, reschedule to today
       const scheduledDate = isBefore(earliestDate, today) ? today : earliestDate
 
@@ -172,6 +248,7 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         status: getDoseStatus(scheduledDate, today),
       })
 
+      if (firstDoseDate === null) firstDoseDate = scheduledDate  // record projected D1
       projectedPrevDate = scheduledDate
     }
   }
