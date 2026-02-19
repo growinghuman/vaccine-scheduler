@@ -259,12 +259,12 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'IPV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
   { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 208, minIntervalWeeks: 26 },
 
-  // MMR
-  { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
+  // MMR — D1 must be on or after the 1st birthday (exact calendar date, not 52 weeks)
+  { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52, minAgeMonths: 12 },
   { vaccineId: 'MMR', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 4 },
 
-  // Varicella
-  { vaccineId: 'Varicella', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
+  // Varicella — D1 must be on or after the 1st birthday (exact calendar date, not 52 weeks)
+  { vaccineId: 'Varicella', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52, minAgeMonths: 12 },
   { vaccineId: 'Varicella', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 12 },
 
   // Hib — not recommended for healthy children >= 5 years (260 weeks)

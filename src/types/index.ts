@@ -31,6 +31,7 @@ export interface VaccineRule {
   doseNumber: number
   standardAgeMonths: number
   minAgeWeeks: number
+  minAgeMonths?: number  // If set, min age is DOB + minAgeMonths (exact calendar month); overrides minAgeWeeks
   minIntervalWeeks?: number
   maxAgeWeeks?: number   // If set, dose cannot be scheduled at or after DOB + maxAgeWeeks
 }

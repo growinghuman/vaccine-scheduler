@@ -154,7 +154,10 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       const effectiveMinAgeWeeks = isInfluenzaGroup
         ? (doseTypeStr === 'InfluenzaLAIV' ? 104 : doseTypeStr === 'InfluenzaRIV' ? 936 : 26)
         : rule.minAgeWeeks
-      const minAgeDate = addWeeks(dobDate, effectiveMinAgeWeeks)
+      // minAgeMonths (if set) uses exact calendar month (e.g. 1st birthday); overrides minAgeWeeks
+      const minAgeDate = rule.minAgeMonths !== undefined
+        ? addMonths(dobDate, rule.minAgeMonths)
+        : addWeeks(dobDate, effectiveMinAgeWeeks)
       const isOldEnough = !isBefore(givenDate, minAgeDate)
       // IPV D3: minimum interval is age-dependent
       //   <4 years (208w) at time of dose → 4 weeks;  ≥4 years → 6 months (26w, final dose)
@@ -311,7 +314,9 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     for (let i = validDoseCount; i < effectiveRulesLength; i++) {
       const rule = effectiveRules[i]
       if (!rule) break
-      const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
+      const minAgeDate = rule.minAgeMonths !== undefined
+        ? addMonths(dobDate, rule.minAgeMonths)
+        : addWeeks(dobDate, rule.minAgeWeeks)
       const minIntervalDate =
         projectedPrevDate && rule.minIntervalWeeks
           ? addWeeks(projectedPrevDate, rule.minIntervalWeeks)
