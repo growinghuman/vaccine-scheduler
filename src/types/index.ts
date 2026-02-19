@@ -24,6 +24,7 @@ export interface VaccineRule {
   standardAgeMonths: number
   minAgeWeeks: number
   minIntervalWeeks?: number
+  maxAgeWeeks?: number   // If set, dose cannot be scheduled at or after DOB + maxAgeWeeks
 }
 
 export type ScheduleMode = 'newborn' | 'catchup'

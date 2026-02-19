@@ -1,4 +1,4 @@
-import { addWeeks, addMonths, isAfter, isBefore, isToday, format } from 'date-fns'
+import { addWeeks, addMonths, isAfter, isBefore, isToday, format, differenceInWeeks } from 'date-fns'
 import { VACCINE_RULES, VACCINE_INFO } from '@/data/vaccineData'
 import type { DoseHistory, ScheduledDose, VaccineType } from '@/types'
 
@@ -127,11 +127,25 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       }
     }
 
+    // Conditional final-dose skip:
+    // DTaP D5 not needed if D4 was given at age >= 4 years (208 weeks from DOB).
+    // IPV D4 not needed if D3 was given at age >= 4 years (208 weeks from DOB).
+    let effectiveRulesLength = rules.length
+    if (prevValidDate) {
+      const ageAtLastDoseWeeks = differenceInWeeks(prevValidDate, dobDate)
+      if (vaccineId === 'DTaP' && validDoseCount === 4 && ageAtLastDoseWeeks >= 208) {
+        effectiveRulesLength = 4 // D5 not needed
+      }
+      if (vaccineId === 'IPV' && validDoseCount === 3 && ageAtLastDoseWeeks >= 208) {
+        effectiveRulesLength = 3 // D4 not needed
+      }
+    }
+
     // Schedule ALL remaining doses in a compressed catch-up sequence.
     // Each dose projects forward from the previous planned date; overdue doses
     // are assumed to be given "today" when projecting the next dose's earliest date.
     let projectedPrevDate = prevValidDate
-    for (let i = validDoseCount; i < rules.length; i++) {
+    for (let i = validDoseCount; i < effectiveRulesLength; i++) {
       const rule = rules[i]
       const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
       const minIntervalDate =
@@ -141,6 +155,12 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       const earliestDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
       // If the earliest eligible date is in the past, reschedule to today
       const scheduledDate = isBefore(earliestDate, today) ? today : earliestDate
+
+      // Max age check: if scheduled date is at or after DOB + maxAgeWeeks, stop the series
+      if (rule.maxAgeWeeks !== undefined) {
+        const maxAgeDate = addWeeks(dobDate, rule.maxAgeWeeks)
+        if (!isBefore(scheduledDate, maxAgeDate)) break
+      }
 
       result.push({
         vaccineId: vaccineId as VaccineType,

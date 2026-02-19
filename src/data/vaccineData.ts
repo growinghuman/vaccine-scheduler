@@ -128,31 +128,31 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24 },
 
   // MMR
-  { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 48 },
+  { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
   { vaccineId: 'MMR', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 4 },
 
   // Varicella
-  { vaccineId: 'Varicella', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 48 },
+  { vaccineId: 'Varicella', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
   { vaccineId: 'Varicella', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 12 },
 
-  // Hib
-  { vaccineId: 'Hib', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
-  { vaccineId: 'Hib', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
-  { vaccineId: 'Hib', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
-  { vaccineId: 'Hib', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8 },
+  // Hib — not recommended for healthy children >= 5 years (260 weeks)
+  { vaccineId: 'Hib', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 260 },
+  { vaccineId: 'Hib', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 260 },
+  { vaccineId: 'Hib', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 260 },
+  { vaccineId: 'Hib', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, maxAgeWeeks: 260 },
 
-  // PCV (Pneumococcal)
-  { vaccineId: 'PCV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
-  { vaccineId: 'PCV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
-  { vaccineId: 'PCV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
-  { vaccineId: 'PCV', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8 },
+  // PCV (Pneumococcal) — not recommended for healthy children >= 5 years (260 weeks)
+  { vaccineId: 'PCV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 260 },
+  { vaccineId: 'PCV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 260 },
+  { vaccineId: 'PCV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 260 },
+  { vaccineId: 'PCV', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, maxAgeWeeks: 260 },
 
   // Hepatitis A (HepA)
   { vaccineId: 'HepA', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
-  { vaccineId: 'HepA', doseNumber: 2, standardAgeMonths: 18, minAgeWeeks: 72, minIntervalWeeks: 24 },
+  { vaccineId: 'HepA', doseNumber: 2, standardAgeMonths: 18, minAgeWeeks: 78, minIntervalWeeks: 26 },
 
-  // Rotavirus
-  { vaccineId: 'Rotavirus', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
-  { vaccineId: 'Rotavirus', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
-  { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
+  // Rotavirus — D1 must be given before 15 weeks of age; any dose before 8 months (35 weeks)
+  { vaccineId: 'Rotavirus', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 15 },
+  { vaccineId: 'Rotavirus', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 35 },
+  { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 35 },
 ]
