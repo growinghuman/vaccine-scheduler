@@ -89,13 +89,24 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
   const vaccineIds = [...new Set(VACCINE_RULES.map((r) => r.vaccineId))]
 
   for (const vaccineId of vaccineIds) {
+    // InfluenzaLAIV and InfluenzaRIV are handled as part of the 'Influenza' group
+    if (vaccineId === 'InfluenzaLAIV' || vaccineId === 'InfluenzaRIV') continue
+
     const rules = VACCINE_RULES.filter((r) => r.vaccineId === vaccineId).sort(
       (a, b) => a.doseNumber - b.doseNumber,
     )
-    // Sort by actual date given (not user-entered dose number)
-    const given = (historyMap.get(vaccineId) ?? []).sort(
-      (a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime(),
-    )
+    // Merge all Influenza subtypes into one group; annotate each dose with its actual type.
+    // For non-Influenza vaccines _typeId === vaccineId.
+    const isInfluenzaGroup = vaccineId === 'Influenza'
+    const given: (DoseHistory & { _typeId: VaccineType })[] = isInfluenzaGroup
+      ? [
+          ...(historyMap.get('Influenza')     ?? []).map((d) => ({ ...d, _typeId: 'Influenza'     as VaccineType })),
+          ...(historyMap.get('InfluenzaLAIV') ?? []).map((d) => ({ ...d, _typeId: 'InfluenzaLAIV' as VaccineType })),
+          ...(historyMap.get('InfluenzaRIV')  ?? []).map((d) => ({ ...d, _typeId: 'InfluenzaRIV'  as VaccineType })),
+        ].sort((a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime())
+      : (historyMap.get(vaccineId) ?? [])
+          .map((d) => ({ ...d, _typeId: vaccineId as VaccineType }))
+          .sort((a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime())
     const info = VACCINE_INFO[vaccineId]
 
     let prevValidDate: Date | null = null
@@ -109,9 +120,9 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         const ageAtD1Weeks = differenceInWeeks(firstValidDoseDate, dobDate)
         if (ageAtD1Weeks < 780) {
           result.push({
-            vaccineId: vaccineId as VaccineType,
-            vaccineName: info.name,
-            vaccineKoreanName: info.koreanName,
+            vaccineId: dose._typeId,
+            vaccineName: VACCINE_INFO[dose._typeId].name,
+            vaccineKoreanName: VACCINE_INFO[dose._typeId].koreanName,
             doseNumber: dose.doseNumber,
             scheduledDate: dose.dateGiven,
             ageLabel: '—',
@@ -126,9 +137,9 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       if (!rule) {
         // Given beyond the total series length — mark invalid
         result.push({
-          vaccineId: vaccineId as VaccineType,
-          vaccineName: info.name,
-          vaccineKoreanName: info.koreanName,
+          vaccineId: dose._typeId,
+          vaccineName: VACCINE_INFO[dose._typeId].name,
+          vaccineKoreanName: VACCINE_INFO[dose._typeId].koreanName,
           doseNumber: dose.doseNumber,
           scheduledDate: dose.dateGiven,
           ageLabel: '—',
@@ -138,7 +149,12 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       }
 
       const givenDate = new Date(dose.dateGiven)
-      const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
+      // Influenza subtypes each have their own minimum age
+      const doseTypeStr = dose._typeId as string
+      const effectiveMinAgeWeeks = isInfluenzaGroup
+        ? (doseTypeStr === 'InfluenzaLAIV' ? 104 : doseTypeStr === 'InfluenzaRIV' ? 936 : 26)
+        : rule.minAgeWeeks
+      const minAgeDate = addWeeks(dobDate, effectiveMinAgeWeeks)
       const isOldEnough = !isBefore(givenDate, minAgeDate)
       // IPV D3: minimum interval is age-dependent
       //   <4 years (208w) at time of dose → 4 weeks;  ≥4 years → 6 months (26w, final dose)
@@ -164,9 +180,9 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       const isValid = isOldEnough && hasMinInterval && hasHpvD1ToD3Min
 
       result.push({
-        vaccineId: vaccineId as VaccineType,
-        vaccineName: info.name,
-        vaccineKoreanName: info.koreanName,
+        vaccineId: dose._typeId,
+        vaccineName: VACCINE_INFO[dose._typeId].name,
+        vaccineKoreanName: VACCINE_INFO[dose._typeId].koreanName,
         // Valid doses get the correct sequential number; invalid keep what user entered
         doseNumber: isValid ? validDoseCount + 1 : dose.doseNumber,
         scheduledDate: dose.dateGiven,
@@ -247,7 +263,7 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     //   Age ≥9yr (≥468w) at D1: 1 dose only (RIV min age 18yr → always 1 dose)
     //   Age <9yr with ≥2 prior valid doses: series already complete (no projection)
     //   Age <9yr with <2 prior valid doses: 2-dose series (D1→D2 ≥4w)
-    if (vaccineId === 'Influenza' || vaccineId === 'InfluenzaLAIV' || vaccineId === 'InfluenzaRIV') {
+    if (isInfluenzaGroup) {
       const firstDoseDate = firstValidDoseDate ?? today
       const ageAtD1Weeks = differenceInWeeks(firstDoseDate, dobDate)
       if (ageAtD1Weeks >= 468) {
