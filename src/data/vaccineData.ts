@@ -119,6 +119,55 @@ export const VACCINE_INFO: Record<string, VaccineInfo> = {
       'Shoulder injury related to vaccine administration (SIRVA)',
     ],
   },
+  MCV4: {
+    id: 'MCV4',
+    name: 'MenACWY',
+    koreanName: 'MenACWY',
+    description: 'Prevents meningococcal disease caused by Neisseria meningitidis serogroups A, C, W, and Y.',
+    commonSideEffects: [
+      'Pain, redness, or swelling at injection site',
+      'Mild fever',
+      'Headache',
+      'Fatigue',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+      'Guillain-Barré syndrome (very rare)',
+    ],
+  },
+  HPV: {
+    id: 'HPV',
+    name: 'HPV',
+    koreanName: 'HPV',
+    description: 'Prevents infection by human papillomavirus strains that cause cervical cancer, genital warts, and other HPV-related cancers.',
+    commonSideEffects: [
+      'Pain, redness, or swelling at injection site',
+      'Dizziness or fainting (sit for 15 min after vaccination)',
+      'Headache',
+      'Nausea',
+      'Mild fever',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+    ],
+  },
+  MenB: {
+    id: 'MenB',
+    name: 'MenB',
+    koreanName: 'MenB',
+    description: 'Prevents meningococcal disease caused by Neisseria meningitidis serogroup B.',
+    commonSideEffects: [
+      'Pain, redness, or swelling at injection site',
+      'Fatigue',
+      'Headache',
+      'Muscle or joint pain',
+      'Fever or chills',
+      'Nausea',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+    ],
+  },
 }
 
 // CDC Birth-18 Years Immunization Schedule 2026
@@ -174,7 +223,21 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 35 },
 
   // Tdap — adolescent booster at age 11–12 years (routine); catch-up for ages 7–18
-  // minAgeWeeks: 364 = 7 years (earliest catch-up age)
-  // maxAgeWeeks: 936 = 18 years (end of childhood/adolescent schedule)
+  // minAgeWeeks: 364 = 7 years; maxAgeWeeks: 936 = 18 years
   { vaccineId: 'Tdap', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 364, maxAgeWeeks: 936 },
+
+  // MenACWY (MCV4) — D1 at 11–12 years, D2 booster at 16 years
+  // D2 minAgeWeeks: 832 = 16 years; minIntervalWeeks: 8 (catch-up minimum)
+  { vaccineId: 'MCV4', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 572 },
+  { vaccineId: 'MCV4', doseNumber: 2, standardAgeMonths: 192, minAgeWeeks: 832, minIntervalWeeks: 8 },
+
+  // HPV — 2-dose series; D1 at 11–12 years (can start at 9); D2 at least 6 months (24 weeks) after D1
+  // minAgeWeeks: 468 = 9 years
+  { vaccineId: 'HPV', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 468 },
+  { vaccineId: 'HPV', doseNumber: 2, standardAgeMonths: 138, minAgeWeeks: 468, minIntervalWeeks: 24 },
+
+  // MenB — 2-dose series at 16–23 years (shared clinical decision-making)
+  // minAgeWeeks: 832 = 16 years; minIntervalWeeks: 4 (1 month minimum, Bexsero 2-dose schedule)
+  { vaccineId: 'MenB', doseNumber: 1, standardAgeMonths: 192, minAgeWeeks: 832 },
+  { vaccineId: 'MenB', doseNumber: 2, standardAgeMonths: 193, minAgeWeeks: 832, minIntervalWeeks: 4 },
 ]

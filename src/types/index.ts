@@ -9,6 +9,9 @@ export type VaccineType =
   | 'HepA'
   | 'Rotavirus'
   | 'Tdap'
+  | 'MCV4'
+  | 'HPV'
+  | 'MenB'
 
 export interface VaccineInfo {
   id: VaccineType
