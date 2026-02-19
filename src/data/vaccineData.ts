@@ -102,6 +102,23 @@ export const VACCINE_INFO: Record<string, VaccineInfo> = {
     commonSideEffects: ['Fussiness or irritability', 'Temporary diarrhea or vomiting'],
     seriousSideEffects: ['Intussusception / bowel obstruction (very rare)'],
   },
+  Tdap: {
+    id: 'Tdap',
+    name: 'Tdap',
+    koreanName: 'Tdap',
+    description: 'Adolescent/adult booster protecting against tetanus, diphtheria, and pertussis (whooping cough).',
+    commonSideEffects: [
+      'Pain, redness, or swelling at injection site',
+      'Mild fever',
+      'Headache',
+      'Fatigue',
+      'Nausea or stomach upset',
+    ],
+    seriousSideEffects: [
+      'Severe allergic reaction (anaphylaxis)',
+      'Shoulder injury related to vaccine administration (SIRVA)',
+    ],
+  },
 }
 
 // CDC Birth-18 Years Immunization Schedule 2026
@@ -114,12 +131,12 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'HepB', doseNumber: 2, standardAgeMonths: 2, minAgeWeeks: 4, minIntervalWeeks: 4 },
   { vaccineId: 'HepB', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 24, minIntervalWeeks: 8 },
 
-  // DTaP
-  { vaccineId: 'DTaP', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
-  { vaccineId: 'DTaP', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
-  { vaccineId: 'DTaP', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
-  { vaccineId: 'DTaP', doseNumber: 4, standardAgeMonths: 15, minAgeWeeks: 52, minIntervalWeeks: 24 },
-  { vaccineId: 'DTaP', doseNumber: 5, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24 },
+  // DTaP — approved only for children < 7 years (< 364 weeks); use Tdap at age 7+
+  { vaccineId: 'DTaP', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 4, standardAgeMonths: 15, minAgeWeeks: 52, minIntervalWeeks: 24, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 5, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24, maxAgeWeeks: 364 },
 
   // IPV
   { vaccineId: 'IPV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
@@ -155,4 +172,9 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'Rotavirus', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 15 },
   { vaccineId: 'Rotavirus', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 35 },
   { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 35 },
+
+  // Tdap — adolescent booster at age 11–12 years (routine); catch-up for ages 7–18
+  // minAgeWeeks: 364 = 7 years (earliest catch-up age)
+  // maxAgeWeeks: 936 = 18 years (end of childhood/adolescent schedule)
+  { vaccineId: 'Tdap', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 364, maxAgeWeeks: 936 },
 ]
