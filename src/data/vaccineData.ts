@@ -188,10 +188,13 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'DTaP', doseNumber: 5, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24, maxAgeWeeks: 364 },
 
   // IPV
+  // D3 interval is age-dependent (handled in scheduleLogic):
+  //   4 weeks if child <4 years at D3; 6 months (26w) if ≥4 years (D3 is then final)
+  // D4: 6 months (26w) after D3, minimum age 4 years (208w) — only if D3 given <4 years
   { vaccineId: 'IPV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
   { vaccineId: 'IPV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
   { vaccineId: 'IPV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
-  { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24 },
+  { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 208, minIntervalWeeks: 26 },
 
   // MMR
   { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },

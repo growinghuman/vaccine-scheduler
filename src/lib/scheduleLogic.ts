@@ -105,10 +105,16 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       const givenDate = new Date(dose.dateGiven)
       const minAgeDate = addWeeks(dobDate, rule.minAgeWeeks)
       const isOldEnough = !isBefore(givenDate, minAgeDate)
+      // IPV D3: minimum interval is age-dependent
+      //   <4 years (208w) at time of dose → 4 weeks;  ≥4 years → 6 months (26w, final dose)
+      let effectiveMinInterval = rule.minIntervalWeeks
+      if (vaccineId === 'IPV' && validDoseCount === 2 && rule.minIntervalWeeks !== undefined) {
+        effectiveMinInterval = differenceInWeeks(givenDate, dobDate) >= 208 ? 26 : 4
+      }
       const hasMinInterval =
-        !prevValidDate || !rule.minIntervalWeeks
+        !prevValidDate || !effectiveMinInterval
           ? true
-          : !isBefore(givenDate, addWeeks(prevValidDate, rule.minIntervalWeeks))
+          : !isBefore(givenDate, addWeeks(prevValidDate, effectiveMinInterval))
       const isValid = isOldEnough && hasMinInterval
 
       result.push({
@@ -227,6 +233,18 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       if (vaccineId === 'HepB' && i === 2 && firstDoseDate) {
         const d1Plus16w = addWeeks(firstDoseDate, 16)
         if (isAfter(d1Plus16w, earliestDate)) earliestDate = d1Plus16w
+      }
+
+      // IPV D3: interval is age-dependent
+      //   If child is <4 years (208w) at projected D3 date → 4-week interval (D4 still needed)
+      //   If child is ≥4 years at projected D3 date → 6-month (26w) interval, D3 is final
+      if (vaccineId === 'IPV' && i === 2 && projectedPrevDate) {
+        const ageAtD3Weeks = differenceInWeeks(earliestDate, dobDate)
+        if (ageAtD3Weeks >= 208) {
+          const d2Plus26w = addWeeks(projectedPrevDate, 26)
+          if (isAfter(d2Plus26w, earliestDate)) earliestDate = d2Plus26w
+          effectiveRulesLength = 3  // D3 is the final dose when given at ≥4 years
+        }
       }
 
       // If the earliest eligible date is in the past, reschedule to today
