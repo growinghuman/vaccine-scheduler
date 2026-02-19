@@ -14,6 +14,27 @@ function maxDosesFor(vaccineId: VaccineType): number {
   return Math.max(...VACCINE_RULES.filter((r) => r.vaccineId === vaccineId).map((r) => r.doseNumber))
 }
 
+// Auto-insert slashes as user types digits → MM/DD/YYYY
+function autoFormatDate(input: string): string {
+  const d = input.replace(/\D/g, '').slice(0, 8)
+  if (d.length > 4) return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+  if (d.length > 2) return `${d.slice(0, 2)}/${d.slice(2)}`
+  return d
+}
+
+// MM/DD/YYYY → YYYY-MM-DD
+function toISO(mmddyyyy: string): string {
+  const [mm, dd, yyyy] = mmddyyyy.split('/')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function isValidMMDDYYYY(v: string): boolean {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return false
+  const [mm, dd, yyyy] = v.split('/').map(Number)
+  const d = new Date(yyyy, mm - 1, dd)
+  return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd
+}
+
 export function SchedulerForm() {
   const { setChildInfo, setMode, setSchedule } = useScheduler()
 
@@ -53,9 +74,9 @@ export function SchedulerForm() {
   }
 
   const handleAddSingle = () => {
-    if (!newDate) { setAddError('Date required.'); return }
+    if (!isValidMMDDYYYY(newDate)) { setAddError('Date required (MM/DD/YYYY).'); return }
     setAddError('')
-    append({ vaccineId: newVaccineId, doseNumber: newDoseNumber, dateGiven: newDate })
+    append({ vaccineId: newVaccineId, doseNumber: newDoseNumber, dateGiven: toISO(newDate) })
     setNewDate('')
   }
 
@@ -76,10 +97,10 @@ export function SchedulerForm() {
   }
 
   const handleAddCombo = () => {
-    if (!comboDate) { setComboError('Date required.'); return }
+    if (!isValidMMDDYYYY(comboDate)) { setComboError('Date required (MM/DD/YYYY).'); return }
     setComboError('')
     selectedCombo.components.forEach((comp, i) => {
-      append({ vaccineId: comp.vaccineId, doseNumber: comboDoses[i], dateGiven: comboDate })
+      append({ vaccineId: comp.vaccineId, doseNumber: comboDoses[i], dateGiven: toISO(comboDate) })
     })
     setComboDate('')
   }
@@ -254,11 +275,13 @@ export function SchedulerForm() {
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-500">Date Given</label>
                 <input
-                  type="date"
+                  type="text"
+                  placeholder="MM/DD/YYYY"
+                  maxLength={10}
                   value={newDate}
-                  onChange={(e) => { setNewDate(e.target.value); setAddError('') }}
+                  onChange={(e) => { setNewDate(autoFormatDate(e.target.value)); setAddError('') }}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSingle())}
-                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
                 />
               </div>
 
@@ -319,11 +342,13 @@ export function SchedulerForm() {
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500">Date Given</label>
                   <input
-                    type="date"
+                    type="text"
+                    placeholder="MM/DD/YYYY"
+                    maxLength={10}
                     value={comboDate}
-                    onChange={(e) => { setComboDate(e.target.value); setComboError('') }}
+                    onChange={(e) => { setComboDate(autoFormatDate(e.target.value)); setComboError('') }}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCombo())}
-                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
                   />
                 </div>
 
