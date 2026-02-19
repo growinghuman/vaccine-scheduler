@@ -234,10 +234,14 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'MCV4', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 572 },
   { vaccineId: 'MCV4', doseNumber: 2, standardAgeMonths: 192, minAgeWeeks: 832, minIntervalWeeks: 8 },
 
-  // HPV — 2-dose series; D1 at 11–12 years (can start at 9); D2 at least 6 months (24 weeks) after D1
+  // HPV — series length depends on age at D1 (handled in scheduleLogic):
+  //   D1 before 15th birthday (< 780w): 2-dose series, D1→D2 ≥24w (6 months)
+  //   D1 at ≥15 years (≥780w):          3-dose series, D1→D2 ≥4w, D2→D3 ≥12w, D1→D3 ≥24w
+  // D3 is excluded from the standard (newborn) schedule — standard D1 is at 11yr (<15yr)
   // minAgeWeeks: 468 = 9 years
   { vaccineId: 'HPV', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 468 },
-  { vaccineId: 'HPV', doseNumber: 2, standardAgeMonths: 138, minAgeWeeks: 468, minIntervalWeeks: 24 },
+  { vaccineId: 'HPV', doseNumber: 2, standardAgeMonths: 138, minAgeWeeks: 468, minIntervalWeeks: 4 },
+  { vaccineId: 'HPV', doseNumber: 3, standardAgeMonths: 144, minAgeWeeks: 468, minIntervalWeeks: 12 },
 
   // MenB — 2-dose series at 16–23 years (shared clinical decision-making)
   // minAgeWeeks: 832 = 16 years; minIntervalWeeks: 4 (1 month minimum, Bexsero 2-dose schedule)
