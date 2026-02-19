@@ -7,7 +7,8 @@ export type VaccineType =
   | 'Hib'
   | 'PCV'
   | 'HepA'
-  | 'Rotavirus'
+  | 'Rotavirus'   // RotaTeq (RV5) — 3-dose series
+  | 'RotarixHRV'  // Rotarix (HRV) — 2-dose series
   | 'Tdap'
   | 'MCV4'
   | 'HPV'

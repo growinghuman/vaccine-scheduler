@@ -96,9 +96,17 @@ export const VACCINE_INFO: Record<string, VaccineInfo> = {
   },
   Rotavirus: {
     id: 'Rotavirus',
-    name: 'Rotavirus',
-    koreanName: 'Rotavirus',
-    description: 'Prevents severe diarrhea and vomiting caused by rotavirus infection.',
+    name: 'RotaTeq (RV5)',
+    koreanName: 'RotaTeq',
+    description: 'Prevents severe diarrhea and vomiting caused by rotavirus (RotaTeq, 3-dose series).',
+    commonSideEffects: ['Fussiness or irritability', 'Temporary diarrhea or vomiting'],
+    seriousSideEffects: ['Intussusception / bowel obstruction (very rare)'],
+  },
+  RotarixHRV: {
+    id: 'RotarixHRV',
+    name: 'Rotarix (HRV)',
+    koreanName: 'Rotarix',
+    description: 'Prevents severe diarrhea and vomiting caused by rotavirus (Rotarix, 2-dose series).',
     commonSideEffects: ['Fussiness or irritability', 'Temporary diarrhea or vomiting'],
     seriousSideEffects: ['Intussusception / bowel obstruction (very rare)'],
   },
@@ -220,10 +228,17 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'HepA', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
   { vaccineId: 'HepA', doseNumber: 2, standardAgeMonths: 18, minAgeWeeks: 78, minIntervalWeeks: 26 },
 
-  // Rotavirus — D1 must be given before 15 weeks of age; any dose before 8 months (35 weeks)
+  // Rotavirus (RotaTeq, RV5) — 3-dose series
+  // D1: must start by 14w6d (max 15w); series must be complete by 8 months (max 32w)
   { vaccineId: 'Rotavirus', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 15 },
-  { vaccineId: 'Rotavirus', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 35 },
-  { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 35 },
+  { vaccineId: 'Rotavirus', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 32 },
+  { vaccineId: 'Rotavirus', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 32 },
+
+  // Rotavirus (Rotarix, HRV) — 2-dose series
+  // D1: same start window as RotaTeq; series must be complete by 6 months (max 24w)
+  // Not shown in standard (newborn) schedule — user selects brand in catch-up history
+  { vaccineId: 'RotarixHRV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 15 },
+  { vaccineId: 'RotarixHRV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 24 },
 
   // Tdap — adolescent booster at age 11–12 years (routine); catch-up for ages 7–18
   // minAgeWeeks: 364 = 7 years; maxAgeWeeks: 936 = 18 years

@@ -33,10 +33,12 @@ export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
   const dobDate = new Date(dob)
   const today = new Date()
 
-  // HPV D3 is only for the 3-dose series (D1 at ≥15yr). Standard schedule always
-  // starts D1 at 11yr (<15yr), so D3 is never needed in standard mode.
+  // Exclude from standard (newborn) schedule:
+  //  - HPV D3: only for 3-dose series (D1 at ≥15yr); standard D1 is at 11yr
+  //  - RotarixHRV: brand-specific 2-dose series; standard schedule uses RotaTeq (Rotavirus)
   return VACCINE_RULES.filter(
-    (rule) => !(rule.vaccineId === 'HPV' && rule.doseNumber === 3),
+    (rule) => !(rule.vaccineId === 'HPV' && rule.doseNumber === 3)
+           && rule.vaccineId !== 'RotarixHRV',
   ).map((rule) => {
     const info = VACCINE_INFO[rule.vaccineId]
     const scheduledDate = addMonths(dobDate, rule.standardAgeMonths)

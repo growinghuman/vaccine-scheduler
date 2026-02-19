@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useScheduler } from '@/context/SchedulerContext'
 import { calculateNewbornSchedule, calculateCatchupSchedule } from '@/lib/scheduleLogic'
 import { VACCINE_INFO, VACCINE_RULES } from '@/data/vaccineData'
+import { COMBO_VACCINES } from '@/data/comboVaccines'
 import type { SchedulerFormValues, VaccineType } from '@/types'
 
 const VACCINE_IDS = Object.keys(VACCINE_INFO) as VaccineType[]
@@ -28,7 +29,7 @@ export function SchedulerForm() {
   const { fields, append, remove } = useFieldArray({ control, name: 'history' })
   const mode = watch('mode')
 
-  // Local state for the "add dose" row
+  // ── Single-vaccine add ───────────────────────────────────────────────────
   const [newVaccineId, setNewVaccineId] = useState<VaccineType>('HepB')
   const [newDoseNumber, setNewDoseNumber] = useState(1)
   const [newDate, setNewDate] = useState('')
@@ -39,13 +40,39 @@ export function SchedulerForm() {
     setNewDoseNumber(1)
   }
 
-  const handleAdd = () => {
+  const handleAddSingle = () => {
     if (!newDate) { setAddError('Date required.'); return }
     setAddError('')
     append({ vaccineId: newVaccineId, doseNumber: newDoseNumber, dateGiven: newDate })
     setNewDate('')
   }
 
+  // ── Combo-vaccine add ────────────────────────────────────────────────────
+  const [inputMode, setInputMode] = useState<'single' | 'combo'>('single')
+  const [selectedComboIdx, setSelectedComboIdx] = useState(0)
+  const [comboDoses, setComboDoses] = useState<number[]>(
+    COMBO_VACCINES[0].components.map((c) => c.defaultDose),
+  )
+  const [comboDate, setComboDate] = useState('')
+  const [comboError, setComboError] = useState('')
+
+  const selectedCombo = COMBO_VACCINES[selectedComboIdx]
+
+  const handleComboChange = (idx: number) => {
+    setSelectedComboIdx(idx)
+    setComboDoses(COMBO_VACCINES[idx].components.map((c) => c.defaultDose))
+  }
+
+  const handleAddCombo = () => {
+    if (!comboDate) { setComboError('Date required.'); return }
+    setComboError('')
+    selectedCombo.components.forEach((comp, i) => {
+      append({ vaccineId: comp.vaccineId, doseNumber: comboDoses[i], dateGiven: comboDate })
+    })
+    setComboDate('')
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = (data: SchedulerFormValues) => {
     setChildInfo(data.childInfo)
     setMode(data.mode)
@@ -56,7 +83,7 @@ export function SchedulerForm() {
     setSchedule(schedule)
   }
 
-  // Sorted view of history (display only — original indices preserved for remove())
+  // Sorted view of history for display
   const sortedFields = [...fields]
     .map((f, i) => ({ ...f, originalIndex: i }))
     .sort((a, b) => a.dateGiven.localeCompare(b.dateGiven))
@@ -142,62 +169,153 @@ export function SchedulerForm() {
             </p>
           </div>
 
-          {/* Add dose row */}
-          <div className="flex flex-wrap gap-2 items-end">
-            {/* Vaccine selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">Vaccine</label>
-              <select
-                value={newVaccineId}
-                onChange={(e) => handleVaccineChange(e.target.value as VaccineType)}
-                className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {VACCINE_IDS.map((id) => (
-                  <option key={id} value={id}>{VACCINE_INFO[id].name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Dose number selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">Dose #</label>
-              <select
-                value={newDoseNumber}
-                onChange={(e) => setNewDoseNumber(Number(e.target.value))}
-                className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
-              >
-                {Array.from({ length: maxDosesFor(newVaccineId) }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>Dose {n}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Date given */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">Date Given</label>
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => { setNewDate(e.target.value); setAddError('') }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
-                className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <Button
+          {/* Single / Combo toggle */}
+          <div className="flex rounded-md border border-gray-200 overflow-hidden w-fit text-xs">
+            <button
               type="button"
-              onClick={handleAdd}
-              variant="outline"
-              size="sm"
-              className="self-end border-blue-300 text-blue-600 hover:bg-blue-50"
+              onClick={() => { setInputMode('single'); setAddError(''); setComboError('') }}
+              className={`px-3 py-1.5 transition-colors ${
+                inputMode === 'single'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+              }`}
             >
-              + Add
-            </Button>
+              Single Vaccine
+            </button>
+            <button
+              type="button"
+              onClick={() => { setInputMode('combo'); setAddError(''); setComboError('') }}
+              className={`px-3 py-1.5 transition-colors ${
+                inputMode === 'combo'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Combo Vaccine
+            </button>
           </div>
+
+          {/* ── Single mode ── */}
+          {inputMode === 'single' && (
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">Vaccine</label>
+                <select
+                  value={newVaccineId}
+                  onChange={(e) => handleVaccineChange(e.target.value as VaccineType)}
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {VACCINE_IDS.map((id) => (
+                    <option key={id} value={id}>{VACCINE_INFO[id].name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">Dose #</label>
+                <select
+                  value={newDoseNumber}
+                  onChange={(e) => setNewDoseNumber(Number(e.target.value))}
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-24"
+                >
+                  {Array.from({ length: maxDosesFor(newVaccineId) }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>Dose {n}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">Date Given</label>
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => { setNewDate(e.target.value); setAddError('') }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSingle())}
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleAddSingle}
+                variant="outline"
+                size="sm"
+                className="self-end border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                + Add
+              </Button>
+            </div>
+          )}
 
           {addError && <p className="text-xs text-red-500">{addError}</p>}
 
-          {/* Hidden RHF inputs so values are included on submit */}
+          {/* ── Combo mode ── */}
+          {inputMode === 'combo' && (
+            <div className="space-y-2">
+              {/* Combo vaccine selector */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">Combo Vaccine</label>
+                <select
+                  value={selectedComboIdx}
+                  onChange={(e) => handleComboChange(Number(e.target.value))}
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {COMBO_VACCINES.map((cv, i) => (
+                    <option key={cv.id} value={i}>{cv.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Per-component dose selectors */}
+              <div className="flex flex-wrap gap-2 items-end">
+                {selectedCombo.components.map((comp, i) => (
+                  <div key={comp.vaccineId} className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">
+                      {VACCINE_INFO[comp.vaccineId].name}
+                    </label>
+                    <select
+                      value={comboDoses[i]}
+                      onChange={(e) => {
+                        const next = [...comboDoses]
+                        next[i] = Number(e.target.value)
+                        setComboDoses(next)
+                      }}
+                      className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                    >
+                      {Array.from({ length: maxDosesFor(comp.vaccineId) }, (_, n) => n + 1).map((n) => (
+                        <option key={n} value={n}>D{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-500">Date Given</label>
+                  <input
+                    type="date"
+                    value={comboDate}
+                    onChange={(e) => { setComboDate(e.target.value); setComboError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCombo())}
+                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleAddCombo}
+                  variant="outline"
+                  size="sm"
+                  className="self-end border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  + Add All
+                </Button>
+              </div>
+
+              {comboError && <p className="text-xs text-red-500">{comboError}</p>}
+            </div>
+          )}
+
+          {/* Hidden RHF inputs */}
           {fields.map((field, index) => (
             <span key={field.id} className="hidden">
               <input {...register(`history.${index}.vaccineId`)} />
@@ -214,7 +332,7 @@ export function SchedulerForm() {
                   key={field.id}
                   className="flex items-center gap-2 bg-white rounded-md border px-3 py-2 text-sm"
                 >
-                  <span className="font-medium text-gray-800 w-28 shrink-0">
+                  <span className="font-medium text-gray-800 w-32 shrink-0">
                     {VACCINE_INFO[field.vaccineId]?.name}
                   </span>
                   <span className="text-gray-500 w-14 shrink-0">Dose {field.doseNumber}</span>
