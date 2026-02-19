@@ -29,6 +29,18 @@ export function SchedulerForm() {
   const { fields, append, remove } = useFieldArray({ control, name: 'history' })
   const mode = watch('mode')
 
+  // DOB text input: display as MM/DD/YYYY, store and submit as YYYY-MM-DD
+  const { onChange: dobOnChange, ...dobRest } = register('childInfo.dob', {
+    required: 'Please enter the date of birth.',
+    validate: (v: string) => {
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return 'Please use MM/DD/YYYY format'
+      const [mm, dd, yyyy] = v.split('/').map(Number)
+      const d = new Date(yyyy, mm - 1, dd)
+      return (d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd)
+        || 'Invalid date'
+    },
+  })
+
   // ── Single-vaccine add ───────────────────────────────────────────────────
   const [newVaccineId, setNewVaccineId] = useState<VaccineType>('HepB')
   const [newDoseNumber, setNewDoseNumber] = useState(1)
@@ -74,12 +86,16 @@ export function SchedulerForm() {
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = (data: SchedulerFormValues) => {
-    setChildInfo(data.childInfo)
+    // Convert DOB from MM/DD/YYYY display format to YYYY-MM-DD (ISO) for internal use
+    const [mm, dd, yyyy] = data.childInfo.dob.split('/')
+    const isoDob = `${yyyy}-${mm}-${dd}`
+    const childInfo = { ...data.childInfo, dob: isoDob }
+    setChildInfo(childInfo)
     setMode(data.mode)
     const schedule =
       data.mode === 'newborn'
-        ? calculateNewbornSchedule(data.childInfo.dob)
-        : calculateCatchupSchedule(data.childInfo.dob, data.history)
+        ? calculateNewbornSchedule(isoDob)
+        : calculateCatchupSchedule(isoDob, data.history)
     setSchedule(schedule)
   }
 
@@ -112,8 +128,19 @@ export function SchedulerForm() {
       <div className="space-y-1">
         <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
         <input
-          type="date"
-          {...register('childInfo.dob', { required: 'Please enter the date of birth.' })}
+          type="text"
+          placeholder="MM/DD/YYYY"
+          maxLength={10}
+          {...dobRest}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+            e.target.value = digits.length > 4
+              ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+              : digits.length > 2
+              ? `${digits.slice(0, 2)}/${digits.slice(2)}`
+              : digits
+            dobOnChange(e)
+          }}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {errors.childInfo?.dob && (
