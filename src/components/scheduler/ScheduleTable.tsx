@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { PrinterIcon, DownloadIcon } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { useScheduler } from '@/context/SchedulerContext'
 import { VACCINE_INFO, VACCINE_RULES } from '@/data/vaccineData'
 import { Badge } from '@/components/ui/badge'
@@ -125,11 +127,6 @@ export function ScheduleTable() {
     if (!childInfo) return
     setIsExporting(true)
     try {
-      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable'),
-      ])
-
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
       const margin = 14
 
