@@ -2,6 +2,12 @@ import { addWeeks, addMonths, isAfter, isBefore, isToday, format, differenceInWe
 import { VACCINE_RULES, VACCINE_INFO } from '@/data/vaccineData'
 import type { DoseHistory, ScheduledDose, VaccineType } from '@/types'
 
+/** Parse a YYYY-MM-DD string as local midnight (new Date() treats it as UTC, causing off-by-one in US timezones) */
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 const AGE_LABELS: Record<number, string> = {
   0: 'At birth',
   1: '1 month',
@@ -38,15 +44,17 @@ function getDoseStatus(scheduledDate: Date, today: Date): ScheduledDose['status'
  * Calculate standard newborn vaccination schedule from DOB.
  */
 export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
-  const dobDate = new Date(dob)
+  const dobDate = parseLocalDate(dob)
   const today = new Date()
 
   // Exclude from standard (newborn) schedule:
   //  - HPV D3: only for 3-dose series (D1 at ≥15yr); standard D1 is at 11yr
+  //  - MenB D3: only if D2 was given <6 months after D1; standard is 2-dose series
   //  - RotarixHRV: brand-specific 2-dose series; standard schedule uses RotaTeq (Rotavirus)
   //  - InfluenzaLAIV / InfluenzaRIV: user selects vaccine type; standard shows IIV only
   return VACCINE_RULES.filter(
     (rule) => !(rule.vaccineId === 'HPV' && rule.doseNumber === 3)
+           && !(rule.vaccineId === 'MenB' && rule.doseNumber === 3)
            && rule.vaccineId !== 'RotarixHRV'
            && rule.vaccineId !== 'InfluenzaLAIV'
            && rule.vaccineId !== 'InfluenzaRIV',
@@ -75,7 +83,7 @@ export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
  * progression — the next pending dose number is based only on valid doses.
  */
 export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): ScheduledDose[] {
-  const dobDate = new Date(dob)
+  const dobDate = parseLocalDate(dob)
   const today = new Date()
   const result: ScheduledDose[] = []
 
@@ -103,10 +111,10 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
           ...(historyMap.get('Influenza')     ?? []).map((d) => ({ ...d, _typeId: 'Influenza'     as VaccineType })),
           ...(historyMap.get('InfluenzaLAIV') ?? []).map((d) => ({ ...d, _typeId: 'InfluenzaLAIV' as VaccineType })),
           ...(historyMap.get('InfluenzaRIV')  ?? []).map((d) => ({ ...d, _typeId: 'InfluenzaRIV'  as VaccineType })),
-        ].sort((a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime())
+        ].sort((a, b) => parseLocalDate(a.dateGiven).getTime() - parseLocalDate(b.dateGiven).getTime())
       : (historyMap.get(vaccineId) ?? [])
           .map((d) => ({ ...d, _typeId: vaccineId as VaccineType }))
-          .sort((a, b) => new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime())
+          .sort((a, b) => parseLocalDate(a.dateGiven).getTime() - parseLocalDate(b.dateGiven).getTime())
     const info = VACCINE_INFO[vaccineId]
 
     let prevValidDate: Date | null = null
@@ -114,11 +122,10 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     let validDoseCount = 0
 
     for (const dose of given) {
-      // HPV 2-dose series: if D1 was before the 15th birthday (< 780w), the series
+      // HPV 2-dose series: if D1 was before the 15th birthday, the series
       // is complete after 2 doses — any additional dose is beyond the series length.
       if (vaccineId === 'HPV' && validDoseCount >= 2 && firstValidDoseDate) {
-        const ageAtD1Weeks = differenceInWeeks(firstValidDoseDate, dobDate)
-        if (ageAtD1Weeks < 780) {
+        if (isBefore(firstValidDoseDate, addMonths(dobDate, 180))) {
           result.push({
             vaccineId: dose._typeId,
             vaccineName: VACCINE_INFO[dose._typeId].name,
@@ -148,16 +155,15 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         continue
       }
 
-      const givenDate = new Date(dose.dateGiven)
-      // Influenza subtypes each have their own minimum age
-      const doseTypeStr = dose._typeId as string
-      const effectiveMinAgeWeeks = isInfluenzaGroup
-        ? (doseTypeStr === 'InfluenzaLAIV' ? 104 : doseTypeStr === 'InfluenzaRIV' ? 936 : 26)
-        : rule.minAgeWeeks
-      // minAgeMonths (if set) uses exact calendar month (e.g. 1st birthday); overrides minAgeWeeks
-      const minAgeDate = rule.minAgeMonths !== undefined
-        ? addMonths(dobDate, rule.minAgeMonths)
-        : addWeeks(dobDate, effectiveMinAgeWeeks)
+      const givenDate = parseLocalDate(dose.dateGiven)
+      // Influenza subtypes each have their own minimum age (months)
+      const effectiveMinAgeMonths = isInfluenzaGroup
+        ? (dose._typeId === 'InfluenzaLAIV' ? 24 : dose._typeId === 'InfluenzaRIV' ? 216 : 6)
+        : rule.minAgeMonths
+      // minAgeMonths uses exact calendar month (e.g. 1st birthday); fall back to minAgeWeeks
+      const minAgeDate = effectiveMinAgeMonths !== undefined
+        ? addMonths(dobDate, effectiveMinAgeMonths)
+        : addWeeks(dobDate, rule.minAgeWeeks)
       const isOldEnough = !isBefore(givenDate, minAgeDate)
       // IPV D3: minimum interval is age-dependent
       //   <4 years (208w) at time of dose → 4 weeks;  ≥4 years → 6 months (26w, final dose)
@@ -166,16 +172,17 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       //   3-dose (D1 ≥ 780w = 15yr): D1→D2 minimum 4w
       let effectiveMinInterval = rule.minIntervalWeeks
       if (vaccineId === 'IPV' && validDoseCount === 2 && rule.minIntervalWeeks !== undefined) {
-        effectiveMinInterval = differenceInWeeks(givenDate, dobDate) >= 208 ? 26 : 4
+        effectiveMinInterval = !isBefore(givenDate, addMonths(dobDate, 48)) ? 26 : 4
       }
       if (vaccineId === 'HPV' && validDoseCount === 1 && firstValidDoseDate) {
-        const ageAtD1Weeks = differenceInWeeks(firstValidDoseDate, dobDate)
-        effectiveMinInterval = ageAtD1Weeks < 780 ? 24 : 4
+        effectiveMinInterval = isBefore(firstValidDoseDate, addMonths(dobDate, 180)) ? 24 : 4
       }
       const hasMinInterval =
-        !prevValidDate || !effectiveMinInterval
+        !prevValidDate || (!effectiveMinInterval && !rule.minIntervalMonths)
           ? true
-          : !isBefore(givenDate, addWeeks(prevValidDate, effectiveMinInterval))
+          : rule.minIntervalMonths
+            ? !isBefore(givenDate, addMonths(prevValidDate, rule.minIntervalMonths))
+            : !isBefore(givenDate, addWeeks(prevValidDate, effectiveMinInterval!))
       // HPV D3 (3-dose series): additionally enforce D1→D3 minimum 24 weeks (5 months)
       const hasHpvD1ToD3Min =
         !(vaccineId === 'HPV' && validDoseCount === 2 && firstValidDoseDate)
@@ -218,24 +225,21 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     let effectiveRules = rules
     if (vaccineId === 'Hib') {
       const firstDoseDate = firstValidDoseDate ?? today
-      const ageW = differenceInWeeks(firstDoseDate, dobDate)
 
-      if (ageW >= 260) {
-        effectiveRules = []
-      } else if (ageW >= 65) {
-        effectiveRules = [rules[0]]  // 1 dose only
-      } else if (ageW >= 52) {
-        effectiveRules = [rules[0], rules[3]]  // 2-dose: booster 8w after D1, ≥12m
-      } else if (ageW >= 30) {
-        effectiveRules = [rules[0], rules[1], rules[3]]  // 3-dose
+      if (!isBefore(firstDoseDate, addMonths(dobDate, 60))) {
+        effectiveRules = []                                   // ≥5yr: not recommended
+      } else if (!isBefore(firstDoseDate, addMonths(dobDate, 15))) {
+        effectiveRules = [rules[0]]                           // ≥15m: 1 dose only
+      } else if (!isBefore(firstDoseDate, addMonths(dobDate, 12))) {
+        effectiveRules = [rules[0], rules[3]]                 // 12–14m: 2-dose
+      } else if (!isBefore(firstDoseDate, addMonths(dobDate, 7))) {
+        effectiveRules = [rules[0], rules[1], rules[3]]       // 7–11m: 3-dose
       } else {
         // D1 before 7 months (standard 4-dose territory), but:
         // CDC rule: if D1 before 12m AND D2 before 15m → D3 is the FINAL dose (8w after D2)
         if (validDoseCount === 2 && firstValidDoseDate && prevValidDate) {
-          const d1AgeW = differenceInWeeks(firstValidDoseDate, dobDate)
-          const d2AgeW = differenceInWeeks(prevValidDate, dobDate)
-          if (d1AgeW < 52 && d2AgeW < 65) {
-            effectiveRules = [rules[0], rules[1], rules[3]]  // D3/final uses booster rule
+          if (isBefore(firstValidDoseDate, addMonths(dobDate, 12)) && isBefore(prevValidDate, addMonths(dobDate, 15))) {
+            effectiveRules = [rules[0], rules[1], rules[3]]   // D3/final uses booster rule
           }
         }
         // else: standard 4-dose series (effectiveRules = rules)
@@ -244,16 +248,14 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
 
     if (vaccineId === 'PCV') {
       const firstDoseDate = firstValidDoseDate ?? today
-      const firstDoseAgeW = differenceInWeeks(firstDoseDate, dobDate)
-      const todayAgeW = differenceInWeeks(today, dobDate)
 
-      if (firstDoseAgeW >= 104) {
+      if (!isBefore(firstDoseDate, addMonths(dobDate, 24))) {
         // D1 at 24m+: 1 dose only (healthy children)
         effectiveRules = [rules[0]]
-      } else if (firstDoseAgeW >= 52) {
+      } else if (!isBefore(firstDoseDate, addMonths(dobDate, 12))) {
         // D1 at 12-23m: 2 doses, D2=booster (8w after D1, at ≥12m)
         effectiveRules = [rules[0], rules[3]]
-      } else if (validDoseCount >= 1 && validDoseCount < 4 && todayAgeW >= 52) {
+      } else if (validDoseCount >= 1 && validDoseCount < 4 && !isBefore(today, addMonths(dobDate, 12))) {
         // D1 was before 12m AND child is now ≥12m old:
         // the next dose is the FINAL booster (8w min interval, ≥12m age)
         effectiveRules = [...rules.slice(0, validDoseCount), rules[3]]
@@ -268,8 +270,7 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
     //   Age <9yr with <2 prior valid doses: 2-dose series (D1→D2 ≥4w)
     if (isInfluenzaGroup) {
       const firstDoseDate = firstValidDoseDate ?? today
-      const ageAtD1Weeks = differenceInWeeks(firstDoseDate, dobDate)
-      if (ageAtD1Weeks >= 468) {
+      if (!isBefore(firstDoseDate, addMonths(dobDate, 108))) {
         effectiveRules = [rules[0]]   // ≥9yr: 1 dose only
       } else if (validDoseCount >= 2) {
         effectiveRules = []           // <9yr with ≥2 prior doses: complete, nothing to project
@@ -277,31 +278,45 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       // else: <9yr with <2 prior doses → standard 2-dose series (effectiveRules = rules)
     }
 
-    // HPV: 2-dose series if D1 before 15th birthday (< 780w); 3-dose series if D1 ≥15 years.
+    // HPV: 2-dose series if D1 before 15th birthday; 3-dose series if D1 ≥15 years.
     // firstValidDoseDate is the actual D1 date; fall back to today for unvaccinated children.
     if (vaccineId === 'HPV') {
       const firstDoseDate = firstValidDoseDate ?? today
-      const ageAtD1Weeks = differenceInWeeks(firstDoseDate, dobDate)
-      if (ageAtD1Weeks < 780) {
+      if (isBefore(firstDoseDate, addMonths(dobDate, 180))) {
         effectiveRules = rules.slice(0, 2)  // 2-dose series
       }
       // else: ≥15 years → 3-dose series (effectiveRules = rules, all 3)
     }
 
+    // MenB: standard 2-dose series (D1→D2 ≥6 months).
+    // If D2 was given <6 months after D1, D3 is needed (≥4 months after D2).
+    // If D1→D2 ≥6 months, series is complete at 2 doses.
+    if (vaccineId === 'MenB') {
+      if (validDoseCount >= 2 && firstValidDoseDate && prevValidDate) {
+        // D2 already given — check if D1→D2 interval was ≥6 months
+        if (!isBefore(prevValidDate, addMonths(firstValidDoseDate, 6))) {
+          effectiveRules = rules.slice(0, 2)  // 2-dose: interval OK, no D3 needed
+        }
+        // else: D1→D2 < 6 months → 3-dose series (effectiveRules = rules, all 3)
+      } else {
+        effectiveRules = rules.slice(0, 2)  // No D2 yet: project standard 2-dose series
+      }
+    }
+
     // Conditional final-dose skips:
-    // DTaP D5 not needed if D4 was given at age >= 4 years (208 weeks from DOB).
-    // IPV D4 not needed if D3 was given at age >= 4 years (208 weeks from DOB).
+    // DTaP D5 not needed if D4 was given on or after the 4th birthday.
+    // IPV D4 not needed if D3 was given on or after the 4th birthday.
     // PCV: no further doses if most recent dose was at age >= 24 months (104 weeks).
     let effectiveRulesLength = effectiveRules.length
     if (prevValidDate) {
-      const ageAtLastDoseWeeks = differenceInWeeks(prevValidDate, dobDate)
-      if (vaccineId === 'DTaP' && validDoseCount === 4 && ageAtLastDoseWeeks >= 208) {
+      const fourthBirthday = addMonths(dobDate, 48)
+      if (vaccineId === 'DTaP' && validDoseCount === 4 && !isBefore(prevValidDate, fourthBirthday)) {
         effectiveRulesLength = 4 // D5 not needed
       }
-      if (vaccineId === 'IPV' && validDoseCount === 3 && ageAtLastDoseWeeks >= 208) {
+      if (vaccineId === 'IPV' && validDoseCount === 3 && !isBefore(prevValidDate, fourthBirthday)) {
         effectiveRulesLength = 3 // D4 not needed
       }
-      if (vaccineId === 'PCV' && ageAtLastDoseWeeks >= 104) {
+      if (vaccineId === 'PCV' && !isBefore(prevValidDate, addMonths(dobDate, 24))) {
         effectiveRulesLength = validDoseCount // no more doses after 24m+
       }
     }
@@ -318,8 +333,10 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
         ? addMonths(dobDate, rule.minAgeMonths)
         : addWeeks(dobDate, rule.minAgeWeeks)
       const minIntervalDate =
-        projectedPrevDate && rule.minIntervalWeeks
-          ? addWeeks(projectedPrevDate, rule.minIntervalWeeks)
+        projectedPrevDate && (rule.minIntervalMonths || rule.minIntervalWeeks)
+          ? (rule.minIntervalMonths
+              ? addMonths(projectedPrevDate, rule.minIntervalMonths)
+              : addWeeks(projectedPrevDate, rule.minIntervalWeeks!))
           : minAgeDate
       let earliestDate = isAfter(minIntervalDate, minAgeDate) ? minIntervalDate : minAgeDate
 
@@ -341,11 +358,10 @@ export function calculateCatchupSchedule(dob: string, history: DoseHistory[]): S
       }
 
       // IPV D3: interval is age-dependent
-      //   If child is <4 years (208w) at projected D3 date → 4-week interval (D4 still needed)
-      //   If child is ≥4 years at projected D3 date → 6-month (26w) interval, D3 is final
+      //   If child is <4 years at projected D3 date → 4-week interval (D4 still needed)
+      //   If child is ≥4 years (on or after 4th birthday) → 6-month (26w) interval, D3 is final
       if (vaccineId === 'IPV' && i === 2 && projectedPrevDate) {
-        const ageAtD3Weeks = differenceInWeeks(earliestDate, dobDate)
-        if (ageAtD3Weeks >= 208) {
+        if (!isBefore(earliestDate, addMonths(dobDate, 48))) {
           const d2Plus26w = addWeeks(projectedPrevDate, 26)
           if (isAfter(d2Plus26w, earliestDate)) earliestDate = d2Plus26w
           effectiveRulesLength = 3  // D3 is the final dose when given at ≥4 years

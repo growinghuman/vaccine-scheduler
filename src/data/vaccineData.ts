@@ -247,8 +247,8 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'DTaP', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 364 },
   { vaccineId: 'DTaP', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 364 },
   { vaccineId: 'DTaP', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 364 },
-  { vaccineId: 'DTaP', doseNumber: 4, standardAgeMonths: 15, minAgeWeeks: 52, minIntervalWeeks: 24, maxAgeWeeks: 364 },
-  { vaccineId: 'DTaP', doseNumber: 5, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 4, standardAgeMonths: 15, minAgeWeeks: 52, minIntervalWeeks: 24, minAgeMonths: 15, maxAgeWeeks: 364 },
+  { vaccineId: 'DTaP', doseNumber: 5, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 24, minAgeMonths: 48, maxAgeWeeks: 364 },
 
   // IPV
   // D3 interval is age-dependent (handled in scheduleLogic):
@@ -257,30 +257,30 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'IPV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6 },
   { vaccineId: 'IPV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4 },
   { vaccineId: 'IPV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4 },
-  { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 208, minIntervalWeeks: 26 },
+  { vaccineId: 'IPV', doseNumber: 4, standardAgeMonths: 48, minAgeWeeks: 208, minIntervalWeeks: 26, minAgeMonths: 48 },
 
   // MMR — D1 must be on or after the 1st birthday (exact calendar date, not 52 weeks)
   { vaccineId: 'MMR', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52, minAgeMonths: 12 },
-  { vaccineId: 'MMR', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 4 },
+  { vaccineId: 'MMR', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 4, minAgeMonths: 48 },
 
   // Varicella — D1 must be on or after the 1st birthday (exact calendar date, not 52 weeks)
   { vaccineId: 'Varicella', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52, minAgeMonths: 12 },
-  { vaccineId: 'Varicella', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 12 },
+  { vaccineId: 'Varicella', doseNumber: 2, standardAgeMonths: 48, minAgeWeeks: 192, minIntervalWeeks: 12, minAgeMonths: 48 },
 
   // Hib — not recommended for healthy children >= 5 years (260 weeks)
   { vaccineId: 'Hib', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 260 },
   { vaccineId: 'Hib', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 260 },
   { vaccineId: 'Hib', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 260 },
-  { vaccineId: 'Hib', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, maxAgeWeeks: 260 },
+  { vaccineId: 'Hib', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, minAgeMonths: 12, maxAgeWeeks: 260 },
 
   // PCV (Pneumococcal) — not recommended for healthy children >= 5 years (260 weeks)
   { vaccineId: 'PCV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 260 },
   { vaccineId: 'PCV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 260 },
   { vaccineId: 'PCV', doseNumber: 3, standardAgeMonths: 6, minAgeWeeks: 14, minIntervalWeeks: 4, maxAgeWeeks: 260 },
-  { vaccineId: 'PCV', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, maxAgeWeeks: 260 },
+  { vaccineId: 'PCV', doseNumber: 4, standardAgeMonths: 12, minAgeWeeks: 52, minIntervalWeeks: 8, minAgeMonths: 12, maxAgeWeeks: 260 },
 
-  // Hepatitis A (HepA)
-  { vaccineId: 'HepA', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52 },
+  // Hepatitis A (HepA) — D1 must be on or after the 1st birthday (exact calendar date)
+  { vaccineId: 'HepA', doseNumber: 1, standardAgeMonths: 12, minAgeWeeks: 52, minAgeMonths: 12 },
   { vaccineId: 'HepA', doseNumber: 2, standardAgeMonths: 18, minAgeWeeks: 78, minIntervalWeeks: 26 },
 
   // Rotavirus (RotaTeq, RV5) — 3-dose series
@@ -295,46 +295,44 @@ export const VACCINE_RULES: VaccineRule[] = [
   { vaccineId: 'RotarixHRV', doseNumber: 1, standardAgeMonths: 2, minAgeWeeks: 6, maxAgeWeeks: 15 },
   { vaccineId: 'RotarixHRV', doseNumber: 2, standardAgeMonths: 4, minAgeWeeks: 10, minIntervalWeeks: 4, maxAgeWeeks: 24 },
 
-  // Tdap — adolescent booster at age 11–12 years (routine); catch-up for ages 7–18
-  // minAgeWeeks: 364 = 7 years; maxAgeWeeks: 936 = 18 years
-  { vaccineId: 'Tdap', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 364, maxAgeWeeks: 936 },
+  // Tdap — adolescent booster at age 11–12 years (routine)
+  { vaccineId: 'Tdap', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 364, minAgeMonths: 132, maxAgeWeeks: 936 },
 
   // MenACWY (MCV4) — D1 at 11–12 years, D2 booster at 16 years
-  // D2 minAgeWeeks: 832 = 16 years; minIntervalWeeks: 8 (catch-up minimum)
-  { vaccineId: 'MCV4', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 572 },
-  { vaccineId: 'MCV4', doseNumber: 2, standardAgeMonths: 192, minAgeWeeks: 832, minIntervalWeeks: 8 },
+  { vaccineId: 'MCV4', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 572, minAgeMonths: 132 },
+  { vaccineId: 'MCV4', doseNumber: 2, standardAgeMonths: 192, minAgeWeeks: 832, minIntervalWeeks: 8, minAgeMonths: 192 },
 
   // HPV — series length depends on age at D1 (handled in scheduleLogic):
-  //   D1 before 15th birthday (< 780w): 2-dose series, D1→D2 ≥24w (6 months)
-  //   D1 at ≥15 years (≥780w):          3-dose series, D1→D2 ≥4w, D2→D3 ≥12w, D1→D3 ≥24w
+  //   D1 before 15th birthday: 2-dose series, D1→D2 ≥24w (6 months)
+  //   D1 at ≥15 years:         3-dose series, D1→D2 ≥4w, D2→D3 ≥12w, D1→D3 ≥24w
   // D3 is excluded from the standard (newborn) schedule — standard D1 is at 11yr (<15yr)
-  // minAgeWeeks: 468 = 9 years
-  { vaccineId: 'HPV', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 468 },
-  { vaccineId: 'HPV', doseNumber: 2, standardAgeMonths: 138, minAgeWeeks: 468, minIntervalWeeks: 4 },
-  { vaccineId: 'HPV', doseNumber: 3, standardAgeMonths: 144, minAgeWeeks: 468, minIntervalWeeks: 12 },
+  { vaccineId: 'HPV', doseNumber: 1, standardAgeMonths: 132, minAgeWeeks: 468, minAgeMonths: 132 },
+  { vaccineId: 'HPV', doseNumber: 2, standardAgeMonths: 138, minAgeWeeks: 468, minIntervalWeeks: 4, minAgeMonths: 132 },
+  { vaccineId: 'HPV', doseNumber: 3, standardAgeMonths: 144, minAgeWeeks: 468, minIntervalWeeks: 12, minAgeMonths: 132 },
 
   // MenB — 2-dose series at 16–23 years (shared clinical decision-making)
-  // minAgeWeeks: 832 = 16 years; minIntervalWeeks: 4 (1 month minimum, Bexsero 2-dose schedule)
-  { vaccineId: 'MenB', doseNumber: 1, standardAgeMonths: 192, minAgeWeeks: 832 },
-  { vaccineId: 'MenB', doseNumber: 2, standardAgeMonths: 193, minAgeWeeks: 832, minIntervalWeeks: 4 },
+  // Standard: D1→D2 ≥6 months. If D2 given <6 months after D1, D3 needed (≥4 months after D2).
+  // D3 excluded from standard (newborn) schedule; only used in catch-up when D1→D2 < 6 months.
+  { vaccineId: 'MenB', doseNumber: 1, standardAgeMonths: 192, minAgeWeeks: 832, minAgeMonths: 192 },
+  { vaccineId: 'MenB', doseNumber: 2, standardAgeMonths: 198, minAgeWeeks: 832, minIntervalMonths: 6, minAgeMonths: 192 },
+  { vaccineId: 'MenB', doseNumber: 3, standardAgeMonths: 202, minAgeWeeks: 832, minIntervalMonths: 4, minAgeMonths: 192 },
 
-  // Influenza IIV (inactivated injectable) — minimum age 6 months (26 weeks)
+  // Influenza IIV (inactivated injectable) — minimum age 6 months
   // Series length is age- and history-dependent (handled in scheduleLogic):
-  //   Age ≥9yr (≥468w): 1 dose
+  //   Age ≥9yr: 1 dose
   //   Age 6m–8yr with <2 prior valid doses: 2 doses, D1→D2 ≥4 weeks
   //   Age 6m–8yr with ≥2 prior valid doses: 1 dose (treated as series complete)
-  // standardAgeMonths 6 = first opportunity; D2 at 7m = 4 weeks after D1
-  { vaccineId: 'Influenza',     doseNumber: 1, standardAgeMonths: 6,   minAgeWeeks: 26 },
-  { vaccineId: 'Influenza',     doseNumber: 2, standardAgeMonths: 7,   minAgeWeeks: 26,  minIntervalWeeks: 4 },
+  { vaccineId: 'Influenza',     doseNumber: 1, standardAgeMonths: 6,   minAgeWeeks: 26,  minAgeMonths: 6 },
+  { vaccineId: 'Influenza',     doseNumber: 2, standardAgeMonths: 7,   minAgeWeeks: 26,  minIntervalWeeks: 4, minAgeMonths: 6 },
 
-  // Influenza LAIV (live attenuated nasal spray) — minimum age 2 years (104 weeks)
+  // Influenza LAIV (live attenuated nasal spray) — minimum age 2 years
   // Same series-length logic as IIV; not shown in standard schedule
-  { vaccineId: 'InfluenzaLAIV', doseNumber: 1, standardAgeMonths: 24,  minAgeWeeks: 104 },
-  { vaccineId: 'InfluenzaLAIV', doseNumber: 2, standardAgeMonths: 25,  minAgeWeeks: 104, minIntervalWeeks: 4 },
+  { vaccineId: 'InfluenzaLAIV', doseNumber: 1, standardAgeMonths: 24,  minAgeWeeks: 104, minAgeMonths: 24 },
+  { vaccineId: 'InfluenzaLAIV', doseNumber: 2, standardAgeMonths: 25,  minAgeWeeks: 104, minIntervalWeeks: 4, minAgeMonths: 24 },
 
-  // Influenza RIV (recombinant injectable) — minimum age 18 years (936 weeks)
+  // Influenza RIV (recombinant injectable) — minimum age 18 years
   // Min age ≥18yr → always ≥9yr → effectiveRules = 1 dose only; D2 rule kept for structure
   // Not shown in standard schedule
-  { vaccineId: 'InfluenzaRIV',  doseNumber: 1, standardAgeMonths: 216, minAgeWeeks: 936 },
-  { vaccineId: 'InfluenzaRIV',  doseNumber: 2, standardAgeMonths: 217, minAgeWeeks: 936, minIntervalWeeks: 4 },
+  { vaccineId: 'InfluenzaRIV',  doseNumber: 1, standardAgeMonths: 216, minAgeWeeks: 936, minAgeMonths: 216 },
+  { vaccineId: 'InfluenzaRIV',  doseNumber: 2, standardAgeMonths: 217, minAgeWeeks: 936, minIntervalWeeks: 4, minAgeMonths: 216 },
 ]

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { format, parseISO } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { useScheduler } from '@/context/SchedulerContext'
@@ -14,14 +14,6 @@ function maxDosesFor(vaccineId: VaccineType): number {
   return Math.max(...VACCINE_RULES.filter((r) => r.vaccineId === vaccineId).map((r) => r.doseNumber))
 }
 
-// Auto-insert slashes as user types digits → MM/DD/YYYY
-function autoFormatDate(input: string): string {
-  const d = input.replace(/\D/g, '').slice(0, 8)
-  if (d.length > 4) return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
-  if (d.length > 2) return `${d.slice(0, 2)}/${d.slice(2)}`
-  return d
-}
-
 // MM/DD/YYYY → YYYY-MM-DD
 function toISO(mmddyyyy: string): string {
   const [mm, dd, yyyy] = mmddyyyy.split('/')
@@ -33,6 +25,51 @@ function isValidMMDDYYYY(v: string): boolean {
   const [mm, dd, yyyy] = v.split('/').map(Number)
   const d = new Date(yyyy, mm - 1, dd)
   return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd
+}
+
+const DATE_MONTHS = [
+  { value: '01', label: 'Jan' }, { value: '02', label: 'Feb' }, { value: '03', label: 'Mar' },
+  { value: '04', label: 'Apr' }, { value: '05', label: 'May' }, { value: '06', label: 'Jun' },
+  { value: '07', label: 'Jul' }, { value: '08', label: 'Aug' }, { value: '09', label: 'Sep' },
+  { value: '10', label: 'Oct' }, { value: '11', label: 'Nov' }, { value: '12', label: 'Dec' },
+]
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: CURRENT_YEAR - 1999 }, (_, i) => CURRENT_YEAR - i)
+const SEL = 'rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+
+function DateDropdowns({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parts = value && value.includes('/') ? value.split('/') : ['', '', '']
+  const mm = parts[0] || ''
+  const dd = parts[1] || ''
+  const yyyy = parts[2] || ''
+  const maxDay = mm && yyyy ? new Date(Number(yyyy), Number(mm), 0).getDate() : 31
+
+  const update = (m: string, d: string, y: string) => {
+    if (m && y) {
+      const max = new Date(Number(y), Number(m), 0).getDate()
+      if (Number(d) > max) d = String(max).padStart(2, '0')
+    }
+    onChange(`${m}/${d}/${y}`)
+  }
+
+  return (
+    <div className="flex gap-1">
+      <select value={mm} onChange={(e) => update(e.target.value, dd, yyyy)} className={SEL}>
+        <option value="">Month</option>
+        {DATE_MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+      </select>
+      <select value={dd} onChange={(e) => update(mm, e.target.value, yyyy)} className={`${SEL} w-[70px]`}>
+        <option value="">Day</option>
+        {Array.from({ length: maxDay }, (_, i) => i + 1).map((d) => (
+          <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+        ))}
+      </select>
+      <select value={yyyy} onChange={(e) => update(mm, dd, e.target.value)} className={SEL}>
+        <option value="">Year</option>
+        {YEARS.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+      </select>
+    </div>
+  )
 }
 
 export function SchedulerForm() {
@@ -49,18 +86,6 @@ export function SchedulerForm() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'history' })
   const mode = watch('mode')
-
-  // DOB text input: display as MM/DD/YYYY, store and submit as YYYY-MM-DD
-  const { onChange: dobOnChange, ...dobRest } = register('childInfo.dob', {
-    required: 'Please enter the date of birth.',
-    validate: (v: string) => {
-      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return 'Please use MM/DD/YYYY format'
-      const [mm, dd, yyyy] = v.split('/').map(Number)
-      const d = new Date(yyyy, mm - 1, dd)
-      return (d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd)
-        || 'Invalid date'
-    },
-  })
 
   // ── Single-vaccine add ───────────────────────────────────────────────────
   const [newVaccineId, setNewVaccineId] = useState<VaccineType>('HepB')
@@ -148,21 +173,14 @@ export function SchedulerForm() {
       {/* Date of Birth */}
       <div className="space-y-1">
         <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-        <input
-          type="text"
-          placeholder="MM/DD/YYYY"
-          maxLength={10}
-          {...dobRest}
-          onChange={(e) => {
-            const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
-            e.target.value = digits.length > 4
-              ? `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
-              : digits.length > 2
-              ? `${digits.slice(0, 2)}/${digits.slice(2)}`
-              : digits
-            dobOnChange(e)
+        <Controller
+          name="childInfo.dob"
+          control={control}
+          rules={{
+            required: 'Please select the date of birth.',
+            validate: (v: string) => isValidMMDDYYYY(v) || 'Please select a complete date',
           }}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          render={({ field }) => <DateDropdowns value={field.value} onChange={field.onChange} />}
         />
         {errors.childInfo?.dob && (
           <p className="text-xs text-red-500">{errors.childInfo.dob.message}</p>
@@ -274,15 +292,7 @@ export function SchedulerForm() {
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-500">Date Given</label>
-                <input
-                  type="text"
-                  placeholder="MM/DD/YYYY"
-                  maxLength={10}
-                  value={newDate}
-                  onChange={(e) => { setNewDate(autoFormatDate(e.target.value)); setAddError('') }}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSingle())}
-                  className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
-                />
+                <DateDropdowns value={newDate} onChange={(v) => { setNewDate(v); setAddError('') }} />
               </div>
 
               <Button
@@ -341,15 +351,7 @@ export function SchedulerForm() {
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-gray-500">Date Given</label>
-                  <input
-                    type="text"
-                    placeholder="MM/DD/YYYY"
-                    maxLength={10}
-                    value={comboDate}
-                    onChange={(e) => { setComboDate(autoFormatDate(e.target.value)); setComboError('') }}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCombo())}
-                    className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
-                  />
+                  <DateDropdowns value={comboDate} onChange={(v) => { setComboDate(v); setComboError('') }} />
                 </div>
 
                 <Button
