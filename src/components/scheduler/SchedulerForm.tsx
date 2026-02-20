@@ -140,7 +140,7 @@ export function SchedulerForm() {
     setMode(data.mode)
     const schedule =
       data.mode === 'newborn'
-        ? calculateNewbornSchedule(isoDob)
+        ? calculateNewbornSchedule(isoDob, data.history)
         : calculateCatchupSchedule(isoDob, data.history)
     setSchedule(schedule)
   }
@@ -225,8 +225,8 @@ export function SchedulerForm() {
         </div>
       </div>
 
-      {/* Vaccination History — catch-up mode only */}
-      {mode === 'catchup' && (
+      {/* Vaccination History */}
+      {(
         <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <div>
             <h3 className="text-sm font-semibold text-gray-700">Vaccination History</h3>

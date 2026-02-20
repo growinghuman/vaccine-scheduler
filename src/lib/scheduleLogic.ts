@@ -42,10 +42,18 @@ function getDoseStatus(scheduledDate: Date, today: Date): ScheduledDose['status'
 
 /**
  * Calculate standard newborn vaccination schedule from DOB.
+ * If history is provided, matching doses are marked as 'completed' with their actual date.
  */
-export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
+export function calculateNewbornSchedule(dob: string, history: DoseHistory[] = []): ScheduledDose[] {
   const dobDate = parseLocalDate(dob)
   const today = new Date()
+
+  // Build a lookup: vaccineId → doseNumber → dateGiven
+  const historyMap = new Map<string, Map<number, string>>()
+  for (const dose of history) {
+    if (!historyMap.has(dose.vaccineId)) historyMap.set(dose.vaccineId, new Map())
+    historyMap.get(dose.vaccineId)!.set(dose.doseNumber, dose.dateGiven)
+  }
 
   // Exclude from standard (newborn) schedule:
   //  - HPV D3: only for 3-dose series (D1 at ≥15yr); standard D1 is at 11yr
@@ -61,15 +69,16 @@ export function calculateNewbornSchedule(dob: string): ScheduledDose[] {
   ).map((rule) => {
     const info = VACCINE_INFO[rule.vaccineId]
     const scheduledDate = addMonths(dobDate, rule.standardAgeMonths)
+    const givenDate = historyMap.get(rule.vaccineId)?.get(rule.doseNumber)
 
     return {
       vaccineId: rule.vaccineId,
       vaccineName: info.name,
       vaccineKoreanName: info.koreanName,
       doseNumber: rule.doseNumber,
-      scheduledDate: format(scheduledDate, 'yyyy-MM-dd'),
+      scheduledDate: givenDate ?? format(scheduledDate, 'yyyy-MM-dd'),
       ageLabel: getAgeLabel(rule.standardAgeMonths),
-      status: getDoseStatus(scheduledDate, today),
+      status: givenDate ? 'completed' : getDoseStatus(scheduledDate, today),
     } satisfies ScheduledDose
   })
 }
